@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ギャンブル王 - ホーム</title>
+    <link rel="stylesheet" href="css/home.css">
+</head>
+<body>
+    <button class="btn-ranking" onclick="showRanking()">🏆 ランキング</button>
+
+    <div class="container">
+        
+        <div class="username-container">
+            <input type="text" id="usernameInput" value="プレイヤー" placeholder="名前を入力" maxlength="10" oninput="validateUsername()">
+            <div id="usernameError" class="name-error-message"></div>
+        </div>
+
+        <div class="money-wrapper">
+            <div class="asset-row">総獲得: <span id="homeTotalAssetsText">$ 0.00</span></div>
+            <div class="money-row">所持金: <span id="homeMoneyText">$ 0.00</span></div>
+        </div>
+
+        <div class="avatar-container">
+            <div class="avatar">
+                <div class="head">
+                    <div class="face-eye eye-left"></div>
+                    <div class="face-eye eye-right"></div>
+                    <div class="face-mouth"></div>
+                </div>
+                <div class="body-torso"></div>
+                <div class="arm arm-left"></div>
+                <div class="arm arm-right"></div>
+                <div class="leg leg-left"></div>
+                <div class="leg leg-right"></div>
+            </div>
+        </div>
+
+        <div class="navigation-area">
+    <button id="btnLobby" class="btn btn-lobby" onclick="toggleOverlay('gameOverlay')">ゲームへ移行</button>
+    <button id="btnWork" class="btn btn-work" onclick="goToWork()">バイトする</button>
+    <button id="btnTrade" class="btn btn-trade" onclick="window.location.href='trade.html'">📈 トレード</button>
+    <button id="btnCustom" class="btn btn-custom" onclick="toggleOverlay('customOverlay')">カスタマイズ</button>
+    <button id="btnShop" class="btn btn-shop" onclick="openShop()">🛒 ショップ</button>
+</div>
+
+        <div id="gameOverlay" class="overlay">
+            <div class="overlay-content">
+                <h2>プレイするゲームを選択</h2>
+                <button onclick="goToGame('slot')">🎰 スロット</button>
+                <button onclick="goToGame('dice')">🎲 ダイスゲーム</button>
+                <button onclick="goToGame('cards')">🃏 カードゲーム</button>
+                <br>
+                <button class="btn-close" onclick="toggleOverlay('gameOverlay')">閉じる</button>
+            </div>
+        </div>
+
+        <div id="customOverlay" class="overlay">
+            <div class="overlay-content">
+                <h2>アバターカラー変更</h2>
+                <p>好きな色を選択してください</p>
+                <div class="color-options">
+                    <button onclick="changeColor('#ffffff')" style="background-color: #ffffff;"></button>
+                    <button onclick="changeColor('#ff8888')" style="background-color: #ff8888;"></button>
+                    <button onclick="changeColor('#88ff88')" style="background-color: #88ff88;"></button>
+                    <button onclick="changeColor('#8888ff')" style="background-color: #8888ff;"></button>
+                    <button onclick="changeColor('#ffd700')" style="background-color: #ffd700;"></button>
+                </div>
+                <br>
+                <button class="btn-close" onclick="toggleOverlay('customOverlay')">決定</button>
+            </div>
+        </div>
+
+        <div id="rankingOverlay" class="overlay">
+            <div class="overlay-content ranking-content">
+                <h2 style="color: #ffd700; margin-top: 0;">🏆 RANKING 🏆</h2>
+                
+                <div class="ranking-tabs">
+                    <button id="tabMoney" class="tab-btn active" onclick="switchRankingTab('money')">所持金</button>
+                    <button id="tabEarned" class="tab-btn" onclick="switchRankingTab('earned')">総獲得</button>
+                </div>
+
+                <div class="ranking-header">
+                    <span class="rank-col">#</span>
+                    <span class="name-col">プレイヤー名</span>
+                    <span class="score-col">金額</span>
+                </div>
+
+                <div id="rankingList" class="ranking-list"></div>
+                
+                <br>
+                <button class="btn-close" onclick="toggleOverlay('rankingOverlay')">閉じる</button>
+            </div>
+        </div>
+
+        <div id="shopOverlay" class="overlay">
+            <div class="overlay-content shop-content">
+                <h2 style="color: #10b981; margin-top: 0;">🛒 SHOP 🛒</h2>
+                <p style="font-size: 0.9rem; color: #ffd700; margin-bottom: 10px;">所持金: <span id="shopCurrentMoney">$ 0.00</span></p>
+                
+                <div class="shop-tabs">
+                    <button id="tabShopItem" class="tab-btn active" onclick="switchShopTab('item')">アイテム</button>
+                    <button id="tabShopAvatar" class="tab-btn" onclick="switchShopTab('avatar')">アバター衣装</button>
+                    <button id="tabShopInvest" class="tab-btn" onclick="switchShopTab('invest')">運用アイテム</button>
+                </div>
+
+                <div id="shopItemSection" class="shop-section">
+                    <div class="shop-card">
+                        <div class="shop-card-header"><span class="shop-card-title">⚡ エナジードリンク</span><span>所持: <span id="shop-count-energyDrink">0</span></span></div>
+                        <div class="shop-card-desc">1分間 獲得金額を30倍</div>
+                        <div class="shop-card-footer"><span class="shop-card-price">$ 100,000,000,000</span><button onclick="buyItem('work', 'energyDrink', 100000000000)">購入</button></div>
+                    </div>
+                    <div class="shop-card">
+                        <div class="shop-card-header"><span class="shop-card-title">🍀 幸運のお守り</span><span>所持: <span id="shop-count-luckyCharm">0</span></span></div>
+                        <div class="shop-card-desc">100クリック 獲得金額を35倍</div>
+                        <div class="shop-card-footer"><span class="shop-card-price">$ 500,000,000,000</span><button onclick="buyItem('work', 'luckyCharm', 500000000000)">購入</button></div>
+                    </div>
+                    <div class="shop-card">
+                        <div class="shop-card-header"><span class="shop-card-title">💪 パーフェクトアーム</span><span>所持: <span id="shop-count-perfectArm">0</span></span></div>
+                        <div class="shop-card-desc">2分間 1タップ10クリック化＆金額10倍</div>
+                        <div class="shop-card-footer"><span class="shop-card-price">$ 10,000,000,000,000</span><button onclick="buyItem('work', 'perfectArm', 10000000000000)">購入</button></div>
+                    </div>
+                    <div class="shop-card">
+                        <div class="shop-card-header"><span class="shop-card-title">👁️ ゴッドアイ</span><span>所持: <span id="shop-count-godEye">0</span></span></div>
+                        <div class="shop-card-desc">20クリック 最高額確定＆金額100倍</div>
+                        <div class="shop-card-footer"><span class="shop-card-price">$ 999,999,999,999,999,999,999</span><button onclick="buyItem('work', 'godEye', 999999999999999999999)">購入</button></div>
+                    </div>
+                </div>
+
+                <div id="shopAvatarSection" class="shop-section" style="display: none;">
+                    <p style="color: #94a3b8; font-size: 0.9rem; text-align: center;">現在職人が仕立て中...<br>近日入荷予定！</p>
+                    <div class="avatar-placeholder-list">
+                        <div class="avatar-placeholder-card">👒 帽子アイテム</div>
+                        <div class="avatar-placeholder-card">😎 顔アイテム</div>
+                        <div class="avatar-placeholder-card">🧣 首アイテム</div>
+                        <div class="avatar-placeholder-card">👕 服アイテム</div>
+                        <div class="avatar-placeholder-card">⌚ 腕アイテム</div>
+                        <div class="avatar-placeholder-card">👖 腰アイテム</div>
+                        <div class="avatar-placeholder-card" style="grid-column: span 2;">👟 靴アイテム</div>
+                    </div>
+                </div>
+
+                <div id="shopInvestSection" class="shop-section" style="display: none;">
+                    <div class="shop-card">
+                        <div class="shop-card-header"><span class="shop-card-title">🧱 レンガ</span><span>所持: <span id="shop-count-brick">0</span></span></div>
+                        <div class="shop-card-footer"><span class="shop-card-price">$ 10,000</span><button onclick="buyItem('invest', 'brick', 10000)">購入</button></div>
+                    </div>
+                    <div class="shop-card">
+                        <div class="shop-card-header"><span class="shop-card-title">🥚 生卵</span><span>所持: <span id="shop-count-egg">0</span></span></div>
+                        <div class="shop-card-footer"><span class="shop-card-price">$ 100,000</span><button onclick="buyItem('invest', 'egg', 100000)">購入</button></div>
+                    </div>
+                    <div class="shop-card">
+                        <div class="shop-card-header"><span class="shop-card-title">✨ 金箔</span><span>所持: <span id="shop-count-goldLeaf">0</span></span></div>
+                        <div class="shop-card-footer"><span class="shop-card-price">$ 500,000,000</span><button onclick="buyItem('invest', 'goldLeaf', 500000000)">購入</button></div>
+                    </div>
+                    <div class="shop-card">
+                        <div class="shop-card-header"><span class="shop-card-title">💎 ルピー</span><span>所持: <span id="shop-count-rupee">0</span></span></div>
+                        <div class="shop-card-footer"><span class="shop-card-price">$ 200,000,000,000</span><button onclick="buyItem('invest', 'rupee', 200000000000)">購入</button></div>
+                    </div>
+                    <div class="shop-card">
+                        <div class="shop-card-header"><span class="shop-card-title">🪙 金塊</span><span>所持: <span id="shop-count-goldBar">0</span></span></div>
+                        <div class="shop-card-footer"><span class="shop-card-price">$ 100,000,000,000,000</span><button onclick="buyItem('invest', 'goldBar', 100000000000000)">購入</button></div>
+                    </div>
+                </div>
+                
+                <br>
+                <button class="btn-close" onclick="toggleOverlay('shopOverlay')">閉じる</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const dummyPlayers = [
+            { name: "カジノの神", money: 9999999, earned: 50000000 },
+            { name: "ラッキーボーイ", money: 500000, earned: 1200000 },
+            { name: "ギャンブラーX", money: 85000, earned: 250000 },
+            { name: "成金おじさん", money: 42000, earned: 42000 },
+            { name: "バイトリーダー", money: 15000, earned: 80000 },
+            { name: "堅実な男", money: 3000, earned: 3500 },
+            { name: "破産寸前", money: 10, earned: 150000 }
+        ];
+
+        let currentRankingType = 'money';
+
+        window.onload = function() {
+            let currentMoney = parseFloat(localStorage.getItem('gk_money')) || 0.0;
+            let totalAssets = parseFloat(localStorage.getItem('gk_total_assets')) || 0.0;
+
+            if (totalAssets === 0 && currentMoney > 0) {
+                totalAssets = currentMoney;
+                localStorage.setItem('gk_total_assets', totalAssets);
+            }
+
+            document.getElementById('homeTotalAssetsText').innerText = `$ ${totalAssets.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('homeMoneyText').innerText = `$ ${currentMoney.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            let savedName = localStorage.getItem('gk_username');
+            if (savedName !== null && savedName !== "") {
+                document.getElementById('usernameInput').value = savedName;
+            }
+            validateUsername();
+            updateShopItemCounts();
+        }
+
+        function validateUsername() {
+            const input = document.getElementById('usernameInput');
+            const errorDiv = document.getElementById('usernameError');
+            let nameVal = input.value;
+
+            const allowedPattern = /^[a-zA-Z0-9\s亜-熙ぁ-んァ-ヶー]*$/;
+            let isValid = true;
+            let errorMsg = "";
+
+            if (nameVal.length < 1) {
+                isValid = false;
+                errorMsg = "最低1文字入力してください";
+            } else if (nameVal.length > 10) {
+                isValid = false;
+                errorMsg = "最大10文字までです";
+            } else if (!allowedPattern.test(nameVal)) {
+                isValid = false;
+                errorMsg = "使用不可な文字が含まれています";
+            }
+
+            if (!isValid) {
+                input.classList.add('input-error');
+                errorDiv.innerText = errorMsg;
+                document.getElementById('btnLobby').disabled = true;
+                document.getElementById('btnWork').disabled = true;
+                document.getElementById('btnCustom').disabled = true;
+                document.getElementById('btnShop').disabled = true;
+            } else {
+                input.classList.remove('input-error');
+                errorDiv.innerText = "";
+                document.getElementById('btnLobby').disabled = false;
+                document.getElementById('btnWork').disabled = false;
+                document.getElementById('btnCustom').disabled = false;
+                document.getElementById('btnShop').disabled = false;
+                localStorage.setItem('gk_username', nameVal);
+            }
+        }
+
+        function toggleOverlay(id) {
+            if (id === 'gameOverlay') {
+                window.location.href = 'game.html';
+            } else {
+                const overlay = document.getElementById(id);
+                overlay.style.display = overlay.style.display === 'flex' ? 'none' : 'flex';
+            }
+        }
+
+        function changeColor(color) {
+            document.documentElement.style.setProperty('--avatar-skin', color);
+        }
+
+        function goToGame(gameType) {
+            window.location.href = gameType + '.html';
+        }
+
+        function goToWork() {
+            window.location.href = 'work.html';
+        }
+
+        // --- ランキング関連の処理 ---
+        function showRanking() {
+            toggleOverlay('rankingOverlay');
+            renderRanking();
+        }
+
+        function switchRankingTab(type) {
+            currentRankingType = type;
+            document.getElementById('tabMoney').classList.toggle('active', type === 'money');
+            document.getElementById('tabEarned').classList.toggle('active', type === 'earned');
+            renderRanking();
+        }
+
+        function renderRanking() {
+            let myName = localStorage.getItem('gk_username') || "プレイヤー";
+            let myMoney = parseFloat(localStorage.getItem('gk_money')) || 0.0;
+            let myEarned = parseFloat(localStorage.getItem('gk_total_assets')) || 0.0;
+
+            let allPlayers = [
+                ...dummyPlayers,
+                { name: myName, money: myMoney, earned: myEarned, isMe: true }
+            ];
+
+            allPlayers.sort((a, b) => b[currentRankingType] - a[currentRankingType]);
+
+            const listDiv = document.getElementById('rankingList');
+            listDiv.innerHTML = '';
+
+            allPlayers.forEach((p, index) => {
+                let item = document.createElement('div');
+                item.className = 'ranking-item' + (p.isMe ? ' is-me' : '');
+                
+                let rankStr = `${index + 1}`;
+                if(index === 0) rankStr = '🥇 1';
+                if(index === 1) rankStr = '🥈 2';
+                if(index === 2) rankStr = '🥉 3';
+
+                let val = p[currentRankingType];
+                
+                item.innerHTML = `
+                    <span class="rank-col">${rankStr}</span>
+                    <span class="name-col">${p.name}</span>
+                    <span class="score-col">$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                `;
+                listDiv.appendChild(item);
+            });
+        }
+
+        // --- ショップ関連の処理 ---
+        function openShop() {
+            updateShopItemCounts();
+            let currentMoney = parseFloat(localStorage.getItem('gk_money')) || 0.0;
+            document.getElementById('shopCurrentMoney').innerText = `$ ${currentMoney.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            toggleOverlay('shopOverlay');
+        }
+
+        function switchShopTab(type) {
+            document.getElementById('tabShopItem').classList.toggle('active', type === 'item');
+            document.getElementById('tabShopAvatar').classList.toggle('active', type === 'avatar');
+            document.getElementById('tabShopInvest').classList.toggle('active', type === 'invest');
+
+            document.getElementById('shopItemSection').style.display = type === 'item' ? 'block' : 'none';
+            document.getElementById('shopAvatarSection').style.display = type === 'avatar' ? 'block' : 'none';
+            document.getElementById('shopInvestSection').style.display = type === 'invest' ? 'block' : 'none';
+        }
+
+        function buyItem(category, key, cost) {
+            let currentMoney = parseFloat(localStorage.getItem('gk_money')) || 0.0;
+            if (currentMoney < cost) {
+                alert("所持金が足りません！");
+                return;
+            }
+            
+            // 支払い
+            currentMoney = Math.round((currentMoney - cost) * 100) / 100;
+            localStorage.setItem('gk_money', currentMoney);
+            
+            // 画面の所持金表示を更新
+            document.getElementById('homeMoneyText').innerText = `$ ${currentMoney.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('shopCurrentMoney').innerText = `$ ${currentMoney.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            // アイテム付与
+            if (category === 'work') {
+                let items = JSON.parse(localStorage.getItem('gk_items')) || {};
+                items[key] = (items[key] || 0) + 1;
+                localStorage.setItem('gk_items', JSON.stringify(items));
+            } else if (category === 'invest') {
+                let investItems = JSON.parse(localStorage.getItem('gk_invest_items')) || {};
+                investItems[key] = (investItems[key] || 0) + 1;
+                localStorage.setItem('gk_invest_items', JSON.stringify(investItems));
+            }
+            
+            updateShopItemCounts();
+        }
+
+        function updateShopItemCounts() {
+            let wItems = JSON.parse(localStorage.getItem('gk_items')) || {};
+            let iItems = JSON.parse(localStorage.getItem('gk_invest_items')) || {};
+
+            let eD = document.getElementById('shop-count-energyDrink'); if(eD) eD.innerText = wItems.energyDrink || 0;
+            let lC = document.getElementById('shop-count-luckyCharm'); if(lC) lC.innerText = wItems.luckyCharm || 0;
+            let pA = document.getElementById('shop-count-perfectArm'); if(pA) pA.innerText = wItems.perfectArm || 0;
+            let gE = document.getElementById('shop-count-godEye'); if(gE) gE.innerText = wItems.godEye || 0;
+
+            let bR = document.getElementById('shop-count-brick'); if(bR) bR.innerText = iItems.brick || 0;
+            let eG = document.getElementById('shop-count-egg'); if(eG) eG.innerText = iItems.egg || 0;
+            let gL = document.getElementById('shop-count-goldLeaf'); if(gL) gL.innerText = iItems.goldLeaf || 0;
+            let rP = document.getElementById('shop-count-rupee'); if(rP) rP.innerText = iItems.rupee || 0;
+            let gB = document.getElementById('shop-count-goldBar'); if(gB) gB.innerText = iItems.goldBar || 0;
+        }
+    </script>
+</body>
+</html>
