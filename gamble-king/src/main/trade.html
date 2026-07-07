@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ギャンブル王 - トレード</title>
+    <link rel="stylesheet" href="css/home.css">
+    <link rel="stylesheet" href="css/trade.css">
+    <style>
+        /* スマホでのダブルタップ拡大を防止 */
+        * { touch-action: manipulation; }
+
+        .btn-back-trade {
+            position: absolute; top: 20px; left: 20px;
+            background: #475569; color: white; padding: 8px 16px;
+            border-radius: 20px; border: none; cursor: pointer;
+            z-index: 10;
+        }
+        .btn-back-trade:hover { background: #64748b; }
+        
+        button:disabled {
+            background: #475569 !important;
+            color: #94a3b8 !important;
+            cursor: not-allowed;
+            box-shadow: none !important;
+            filter: grayscale(100%);
+        }
+        
+        .rate-text { font-size: 1.2rem; color: #ffd700; margin-bottom: 5px; }
+        .val-display { font-size: 2rem; font-weight: bold; margin: 10px 0; }
+        .red { color: #ef4444; }
+        .blue { color: #38bdf8; }
+        .white { color: #ffffff; }
+
+        /* ★ スマホ対応のレイアウト調整 ★ */
+        .trade-container {
+            width: 100%;
+            padding: 15px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        #tradeArea {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        #chart {
+            width: 100%;
+            max-width: 400px; /* PCでは最大400pxまで */
+            height: auto;     /* スマホでは横幅に合わせて自動縮小 */
+            aspect-ratio: 2 / 1;
+            box-sizing: border-box;
+        }
+
+        .controls {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .controls button {
+            flex: 1; /* 購入・売却ボタンを均等に広げる */
+            font-size: 1.1rem;
+            padding: 12px 0;
+        }
+
+        .btn-stop {
+            margin-top: 30px !important; /* 購入・売却ボタンから30px隙間を開ける */
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .event-popup {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            z-index: 100;
+            pointer-events: none;
+            animation: eventFade 2s forwards;
+            border: 2px solid #ffd700;
+            box-shadow: 0 0 15px rgba(255,215,0,0.5);
+            white-space: nowrap;
+        }
+        @keyframes eventFade {
+            0% { opacity: 0; transform: translate(-50%, -30%) scale(0.8); }
+            15% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            30% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -70%) scale(0.9); }
+        }
+    </style>
+</head>
+<body>
+    <button id="homeBtn" class="btn-back-trade" onclick="window.location.href='home.html'">← ホームへ戻る</button>
+    
+    <div class="trade-container">
+        <h2>📈 運用トレード</h2>
+        <div id="setup" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+            <select id="itemSelect" onchange="updatePriceDisplay()" style="width: 80%; max-width: 300px; padding: 10px; font-size: 1rem; border-radius: 8px; margin-bottom: 10px;"></select>
+            <input type="number" id="itemCount" min="1" value="1" oninput="updatePriceDisplay()" style="width: 80%; max-width: 300px; padding: 10px; font-size: 1rem; border-radius: 8px; text-align: center;">
+            <div id="priceInfo" style="margin: 15px 0; color: #ffd700;">
+                <div id="unitPriceDisplay">単価: $0</div>
+                <div id="totalPriceDisplay" style="font-size: 1.2rem; font-weight: bold;">総額(投資額): $0</div>
+            </div>
+            <button id="startBtn" class="btn btn-lobby" onclick="initTrade()" style="width: 80%; max-width: 300px;">トレード開始</button>
+        </div>
+        
+        <div id="tradeArea" style="display:none; position:relative;">
+            <div id="rateDisplay" class="rate-text">レート: 1.00 x</div>
+            <div id="profitDisplay" class="val-display white">$0</div>
+            
+            <canvas id="chart" width="400" height="200"></canvas>
+            
+            <p>残り時間: <span id="time">30.0</span>秒</p>
+            <div class="controls">
+                <button id="buyBtn" onclick="tradeAction('buy')" style="background: #ef4444; color: white;">購入</button>
+                <button id="sellBtn" onclick="tradeAction('sell')" style="background: #38bdf8; color: white;">売却</button>
+            </div>
+            <button class="btn-stop" onclick="finishTrade()">中止して確定する</button>
+            
+            <div id="popupArea"></div>
+        </div>
+    </div>
+
+    <div id="resultOverlay" class="overlay" style="z-index: 9999;">
+        <div class="overlay-content" style="text-align: center;">
+            <h2 style="color: #ffd700; margin-top:0;">トレード終了</h2>
+            <p style="color: #94a3b8; font-size: 0.9rem;">確定した損益額</p>
+            <div id="resultProfitText" style="font-size: 2.2rem; font-weight: bold; margin: 15px 0;"></div>
+            <button class="btn btn-lobby" onclick="window.location.href='home.html'" style="width:100%; margin-top: 15px;">ホームへ戻る</button>
+        </div>
+    </div>
+
+    <script>
+        function formatMoney(value) {
+            if (value < 1e15) return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            let c = Math.floor(Math.log10(value) / 3);
+            let v = value / Math.pow(10, c * 3);
+            let idx = c - 5;
+            let unit = "";
+            let tempIdx = idx;
+            if (tempIdx >= 0) {
+                while (tempIdx >= 0) {
+                    unit = String.fromCharCode(65 + (tempIdx % 26)) + unit;
+                    tempIdx = Math.floor(tempIdx / 26) - 1;
+                }
+            }
+            return v.toFixed(2) + " " + unit;
+        }
+
+        const canvas = document.getElementById('chart');
+        const ctx = canvas.getContext('2d');
+        let investItems = JSON.parse(localStorage.getItem('gk_invest_items')) || {};
+        const prices = { brick: 10000, egg: 100000, goldLeaf: 500000000, rupee: 200000000000, goldBar: 100000000000000 };
+        
+        let activeItem = null, activeCount = 0;
+        let baseTotal = 0;
+        let currentVal = 1.0;
+        let priceHistory = [];
+        let interval;
+        let tick = 0;
+        
+        let hasPosition = false;
+        let entryVal = 0.0;
+        let totalProfit = 0.0;
+
+        let activeEventTicks = 0;
+        let currentTickChange = 0;
+
+        const sel = document.getElementById('itemSelect');
+        const startBtn = document.getElementById('startBtn');
+        const buyBtn = document.getElementById('buyBtn');
+        const sellBtn = document.getElementById('sellBtn');
+        const profitDisplay = document.getElementById('profitDisplay');
+        const rateDisplay = document.getElementById('rateDisplay');
+
+        let hasAnyItem = false;
+        Object.keys(prices).forEach(key => {
+            const count = investItems[key] || 0;
+            if (count > 0) {
+                hasAnyItem = true;
+                sel.innerHTML += `<option value="${key}">${key} (所持:${count})</option>`;
+            }
+        });
+
+        if (!hasAnyItem) {
+            startBtn.disabled = true;
+            startBtn.innerText = "アイテムを購入してください";
+        } else {
+            updatePriceDisplay();
+        }
+
+        function updatePriceDisplay() {
+            const item = sel.value;
+            const count = parseInt(document.getElementById('itemCount').value) || 0;
+            baseTotal = (prices[item] || 0) * count;
+            document.getElementById('unitPriceDisplay').innerText = "単価: $" + formatMoney(prices[item] || 0);
+            document.getElementById('totalPriceDisplay').innerText = "総額(投資額): $" + formatMoney(baseTotal);
+        }
+
+        function initTrade() {
+            if(interval) clearInterval(interval);
+            
+            activeItem = sel.value;
+            activeCount = parseInt(document.getElementById('itemCount').value) || 0;
+            if (activeCount > (investItems[activeItem] || 0)) { alert("所持数が足りません"); return; }
+            
+            investItems[activeItem] -= activeCount;
+            localStorage.setItem('gk_invest_items', JSON.stringify(investItems));
+            
+            currentVal = 1.0;
+            priceHistory = [1.0];
+            tick = 0;
+            totalProfit = 0.0;
+            
+            hasPosition = true;
+            entryVal = 1.0; 
+            
+            document.getElementById('homeBtn').style.display = 'none'; 
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('tradeArea').style.display = 'flex';
+            
+            updateButtons();
+            updateDisplay();
+            runTradeLoop();
+        }
+
+        function tradeAction(actionType) {
+            if (actionType === 'buy' && !hasPosition) {
+                hasPosition = true;
+                entryVal = currentVal;
+            } else if (actionType === 'sell' && hasPosition) {
+                hasPosition = false;
+                totalProfit += baseTotal * (currentVal - entryVal);
+                entryVal = 0.0;
+            }
+            updateButtons();
+            updateDisplay();
+        }
+
+        function updateButtons() {
+            buyBtn.disabled = hasPosition;
+            sellBtn.disabled = !hasPosition;
+        }
+
+        function runTradeLoop() {
+            let timeLeft = 30.0;
+
+            interval = setInterval(() => {
+                timeLeft -= 0.1;
+                if(timeLeft < 0) timeLeft = 0;
+                document.getElementById('time').innerText = timeLeft.toFixed(1);
+
+                if (tick % 50 === 0 && tick <= 250) {
+                    if (Math.random() < 0.10) {
+                        let isPlus = Math.random() < 0.5;
+                        let r = Math.random() * 100;
+                        let totalChange = 0;
+                        let eventName = "";
+
+                        if (isPlus) {
+                            if (r <= 45) { totalChange = 3.0; eventName = "好景気！(+300%)"; }
+                            else if (r <= 80) { totalChange = 2.5; eventName = "買い注文殺到！(+250%)"; }
+                            else if (r <= 95) { totalChange = 4.0; eventName = "大口投資家参入！(+400%)"; }
+                            else { totalChange = 5.0; eventName = "歴史的暴騰！(+500%)"; }
+                        } else {
+                            if (r <= 45) { totalChange = -3.8; eventName = "大暴落発生！(-380%)"; }
+                            else if (r <= 80) { totalChange = -4.0; eventName = "市場パニック！(-400%)"; }
+                            else if (r <= 95) { totalChange = -2.6; eventName = "大口売り逃げ！(-260%)"; }
+                            else { totalChange = 1.2; eventName = "謎の反発！(+120%)"; }
+                        }
+                        activeEventTicks = 40; 
+                        currentTickChange = totalChange / 40.0;
+                        showEventPopup(eventName, isPlus);
+                    }
+                }
+
+                if (activeEventTicks <= 0 && tick % 10 === 0) {
+                    let secChange = (Math.random() * 2.5) - 1.0; 
+                    currentTickChange = secChange / 10.0;
+                }
+
+                currentVal += currentTickChange;
+                if (activeEventTicks > 0) activeEventTicks--;
+                
+                priceHistory.push(currentVal);
+                
+                updateDisplay();
+                tick++;
+
+                if (timeLeft <= 0) { 
+                    clearInterval(interval); 
+                    finishTrade(); 
+                }
+            }, 100);
+        }
+
+        function showEventPopup(text, isPlus) {
+            const popupArea = document.getElementById('popupArea');
+            const el = document.createElement('div');
+            el.className = 'event-popup';
+            el.innerText = text;
+            if(!isPlus && text.includes('-')) {
+                el.style.background = 'rgba(56, 189, 248, 0.9)'; 
+                el.style.borderColor = '#ffffff';
+            }
+            popupArea.appendChild(el);
+            setTimeout(() => { el.remove(); }, 2000);
+        }
+
+        function updateDisplay() {
+            rateDisplay.innerText = `レート: ${currentVal.toFixed(2)} x`;
+
+            let floatingProfit = hasPosition ? baseTotal * (currentVal - entryVal) : 0;
+            let displayVal = totalProfit + floatingProfit;
+            
+            let sign = displayVal > 0 ? "+" : (displayVal < 0 ? "-" : "");
+            profitDisplay.innerText = `${sign}$${formatMoney(Math.abs(displayVal))}`;
+            
+            if (displayVal > 0) profitDisplay.className = "val-display red";
+            else if (displayVal < 0) profitDisplay.className = "val-display blue";
+            else profitDisplay.className = "val-display white";
+
+            drawChart();
+        }
+
+        function finishTrade() {
+            clearInterval(interval);
+            
+            if (hasPosition) {
+                tradeAction('sell');
+            }
+
+            try {
+                let currentMoney = parseFloat(localStorage.getItem('gk_money')) || 0.0;
+                let totalAssets = parseFloat(localStorage.getItem('gk_total_assets')) || 0.0;
+                
+                currentMoney += totalProfit;
+                
+                if (totalProfit > 0) {
+                    totalAssets = Math.round((totalAssets + totalProfit) * 100) / 100;
+                }
+
+                if (currentMoney < 0) {
+                    let deficit = Math.abs(currentMoney);
+                    currentMoney = 0;
+                    totalAssets = Math.max(0, Math.round((totalAssets - deficit) * 100) / 100);
+                }
+                
+                localStorage.setItem('gk_money', currentMoney);
+                localStorage.setItem('gk_total_assets', totalAssets);
+
+                document.getElementById('tradeArea').style.display = 'none';
+                document.getElementById('resultOverlay').style.display = 'flex';
+                
+                const resultText = document.getElementById('resultProfitText');
+                let roundedProfit = Math.round(totalProfit);
+                let sign = roundedProfit > 0 ? "+" : (roundedProfit < 0 ? "-" : "");
+                resultText.innerText = `${sign}$${formatMoney(Math.abs(roundedProfit))}`;
+                resultText.style.color = roundedProfit >= 0 ? '#ef4444' : '#38bdf8';
+                
+            } catch (e) {
+                console.error(e);
+                alert("結果の処理中にエラーが発生しました。");
+                window.location.href = 'home.html';
+            }
+        }
+
+        function drawChart() {
+            ctx.clearRect(0, 0, 400, 200);
+            
+            let maxPoints = 300;
+            let drawHistory = priceHistory.slice(-maxPoints);
+            
+            let minP = Math.min(...drawHistory, 0.5) * 0.9;
+            let maxP = Math.max(...drawHistory, 1.5) * 1.1;
+            let range = (maxP - minP) || 1;
+            
+            ctx.beginPath();
+            drawHistory.forEach((p, i) => {
+                let x = (i / maxPoints) * 400; 
+                let y = 180 - ((p - minP) / range) * 160;
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            });
+            ctx.strokeStyle = '#ffd700';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            if (hasPosition) {
+                let entryY = 180 - ((entryVal - minP) / range) * 160;
+                if (entryY >= 0 && entryY <= 200) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, entryY);
+                    ctx.lineTo(400, entryY);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                    ctx.setLineDash([5, 5]);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
